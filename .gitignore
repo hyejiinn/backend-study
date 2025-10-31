@@ -1,0 +1,6 @@
+/.metadata/
+
+### Mac OS ###
+.DS_Store
+.log
+.idea
