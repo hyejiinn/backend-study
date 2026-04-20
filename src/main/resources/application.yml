@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: springdocs
+
+# 로컬 개발 서버 포트
+server:
+  port: 8080
+
+# 스터디 시 요청/응답 확인을 위한 디버그 로그
+logging:
+  level:
+    org.springframework.web: DEBUG
+    com.sample.test.springdocs: DEBUG

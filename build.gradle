@@ -1,0 +1,107 @@
+plugins {
+  id 'java'
+  id 'org.springframework.boot' version '4.0.5'
+  id 'io.spring.dependency-management' version '1.1.7'
+  // [STEP 2] AsciiDoc → HTML 변환 플러그인 (Gradle 9.x 호환: 4.0.5)
+  id 'org.asciidoctor.jvm.convert' version '4.0.5'
+}
+
+group = 'com.sample.test'
+version = '0.0.1-SNAPSHOT'
+description = 'springdocs'
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+// ─────────────────────────────────────────────────────────────────
+// [개념] asciidoctorExt configuration
+//   spring-restdocs-asciidoctor 라이브러리가 제공하는
+//   'include::snippets' 매크로를 Asciidoctor에 등록하는 역할.
+//   일반 의존성(implementation/testImplementation)과 분리해야 한다.
+// ─────────────────────────────────────────────────────────────────
+configurations {
+  asciidoctorExt
+}
+
+// [주의] spring-restdocs-asciidoctor 4.0.0은 asciidoctorj 3.x API를 사용함.
+//        asciidoctorj 4.x로 자동 업그레이드되면 API 불일치 발생.
+//        asciidoctorj 버전을 3.0.0으로 명시적으로 고정한다.
+asciidoctorj {
+  version = '3.0.0'
+}
+
+// 생성된 스니펫(.adoc 조각 파일)이 저장될 디렉토리
+ext {
+  snippetsDir = file('build/generated-snippets')
+}
+
+dependencies {
+  // ── 프로덕션 의존성 ────────────────────────────────────────────
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+
+  // [STEP 3] springdoc-openapi: Swagger UI 자동 생성
+  //   서버 실행 후 http://localhost:8080/swagger-ui/index.html 에서 확인
+  //   Spring REST Docs와 독립적으로 동작하며, 두 도구를 함께 사용하면
+  //   "테스트 보장 문서(REST Docs)" + "인터랙티브 UI(Swagger)" 장점을 모두 얻을 수 있다.
+  implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
+
+  // ── 테스트 의존성 ──────────────────────────────────────────────
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+  // [STEP 1] Spring REST Docs - MockMvc 연동
+  //   버전은 Spring Boot BOM이 자동 관리(4.0.0)하므로 생략
+  testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+
+  // [STEP 2] AsciiDoc 문서 내 include::snippets 매크로 활성화
+  asciidoctorExt 'org.springframework.restdocs:spring-restdocs-asciidoctor'
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 태스크 설정
+// ─────────────────────────────────────────────────────────────────
+
+// [STEP 1] test: 실행 결과(스니펫)를 snippetsDir에 출력
+tasks.named('test') {
+  useJUnitPlatform()
+  outputs.dir snippetsDir
+}
+
+// [STEP 2] asciidoctor: 스니펫을 참조해 AsciiDoc → HTML 변환
+//   실행 흐름: test → asciidoctor
+//   출력 파일: build/docs/asciidoc/index.html
+tasks.named('asciidoctor') {
+  inputs.dir snippetsDir
+  configurations 'asciidoctorExt'
+  dependsOn test
+  baseDirFollowsSourceDir()
+}
+
+// [선택] bootJar에 생성된 HTML 문서 포함
+//   jar 실행 시 http://localhost:8080/docs/index.html 로 접근 가능
+tasks.named('bootJar') {
+  dependsOn asciidoctor
+  from("${asciidoctor.outputDir}") {
+    into 'static/docs'
+  }
+}
+
+// [선택] bootRun에 생성된 HTML 문서 포함
+//   bootRun 실행 시 http://localhost:8080/docs/index.html 로 접근 가능
+tasks.register('copyDocsForBootRun', Copy) {
+  dependsOn asciidoctor
+  from asciidoctor.outputDir
+  into layout.buildDirectory.dir('resources-docs/static/docs')
+}
+
+tasks.named('bootRun') {
+  dependsOn copyDocsForBootRun
+  classpath += files(layout.buildDirectory.dir('resources-docs'))
+}
