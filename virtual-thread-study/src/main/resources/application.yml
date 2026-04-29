@@ -1,0 +1,4 @@
+spring:
+  threads:
+    virtual:
+      enabled: true  # Spring MVC의 Tomcat 스레드 풀을 Virtual Thread로 교체
