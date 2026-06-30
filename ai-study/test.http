@@ -1,0 +1,20 @@
+### PDF 문서 업로드
+POST http://localhost:8080/api/ingest
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="sample.pdf"
+Content-Type: application/pdf
+
+< D:\혜진\backend-study\ai-study\docs\SKILL.pdf
+--boundary--
+
+###
+
+### 질문하기
+POST http://localhost:8080/api/query
+Content-Type: application/json
+
+{
+  "question": "우리 회사 skills 기술 스택 알려줘"
+}
